@@ -1,0 +1,6 @@
+{
+  "name": "project-session-tools",
+  "description": "Open and close project work sessions with continuity: a Recommended First Move on start, context capture into PROJECT_BRIEF / STATUS / DECISIONS on end, a project-instructions builder, and Freshservice ticket triage. A bundled local MCP server does the file reads, scoring and writes.",
+  "license": "MIT",
+  "keywords": ["sessions", "continuity", "project-status", "context", "freshservice", "mcp"]
+}

@@ -1,0 +1,12 @@
+{
+  "name": "project-session-tools",
+  "owner": { "name": "project-session-tools contributors" },
+  "description": "Skills and a local MCP server for opening, running and closing project work sessions with continuity.",
+  "plugins": [
+    {
+      "name": "project-session-tools",
+      "source": "./",
+      "description": "Project session skills (start, end, status, instructions builder, ticket triage) with a bundled local MCP server."
+    }
+  ]
+}
