@@ -1,7 +1,7 @@
 ---
 name: session-context-updater
 metadata:
-  version: "2026.10.28.4"
+  version: "2026.10.30.1"
 description: "Capture session context into PROJECT_BRIEF.md, STATUS.md, and DECISIONS.md, then refresh the next-session primer. This is the End of a work session. SCOPE GATE: code and IT project work only. Engage when the working folder is a project (a context/ folder, a project-level CLAUDE.md, or a git repo root), or when the user names a project or ticket folder under projects/ or tickets/ from the vault root. In a personal-vault, family, notes, or finance session that names none, do not engage; note-taking there belongs to the user's own notes, and there are no context files to write. END triggers: 'end session', 'session end', 'wrap up', 'wrap this session', 'close out this session'. Prefer this skill over ad-hoc 'I'll update STATUS myself'. Opening a session ('start') belongs to project-status-checker, not this skill."
 ---
 
@@ -118,7 +118,7 @@ Frontmatter `status` back to an active phase. Suggest project-status-checker.
 ## Step 1: Detect
 
 1. **In-vault.** If `vault-context.md` is loaded, set `in_vault` from `%APPDATA%\obsidian\obsidian.json` as that file describes.
-2. **Inventory (scoped).** Read `context/PROJECT_BRIEF.md`, `context/STATUS.md`, and `context/DECISIONS.md` (or flat-root equivalents). Classify by content if names differ. A root `CLAUDE.md` is instructions by name: do **not** read its body on ordinary A/C wrap-up. Read it only if this session drafted or changed project instructions, or this is bootstrap (B) with no trio yet. Walk the rest of the tree **only** if a Brief, Status, or Decisions role is still missing. Do not open `notes/`, `work/`, `archive/`, `docs/`, or `skills/` on a normal wrap-up.
+2. **Inventory (scoped).** Read `context/PROJECT_BRIEF.md`, `context/STATUS.md`, and `context/DECISIONS.md` (or flat-root equivalents). Classify by content if names differ. A root `CLAUDE.md` is instructions by name: do **not** read its body on ordinary A/C wrap-up. Read it only if this session drafted or changed project instructions, or this is bootstrap (B) with no trio yet. Walk the rest of the tree **only** if a Brief, Status, or Decisions role is still missing. Do not open `notes/`, `work/`, `archive/`, `docs/`, or `skills/` on a normal wrap-up. Read all three files in one message as parallel Read calls, and send `stale_items` (item 4) in that same message when a Status file exists.
 3. **Config.** Parse `<!-- session-context-config` from those files using the table above.
 4. **Staleness.** If a Status file exists, `stale_items`. Auto: apply only clear completions/cancellations from this session.
 5. **Empty?** Offer bootstrap only when there are zero project markdown files. If files exist but roles are unclear, ask once.
@@ -154,6 +154,8 @@ Search BRIEF, STATUS, and DECISIONS for those entities. Do **not** search or pat
 
 STATUS and DECISIONS go through the tools (see MCP Tools). Make every other context-file write as a **region edit** with the host's file tools (Edit / Write), never a shell script, heredoc, or `python -c`: a file-tool call names the path it wrote, and commit tooling uses that to tell this session's work from another session's.
 
+**Batch the writes.** Once the package is decided, send every independent write (each BRIEF region edit, the frontmatter edit, `status_write`, `decision_append`) in one message as parallel tool calls. Each Edit still matches its exact old text; a failed match fails only that edit, so fix and resend that one. When the package changes the trio, load `references/next-session-prompt.md` in that same message so the primer can be written right after.
+
 - **BRIEF:** edit only the heading/section that changed.
 - **Frontmatter (in-vault):** refresh `last-updated`; set `status` from phase when known; preserve `health`/`last-check` (checker-owned) and unknown user fields. No frontmatter when not in-vault.
 
@@ -166,6 +168,8 @@ Write `{cwd}/context/` in place (or emit downloadable files if disk is not writa
 Bootstrap also: one-time note that these files are the continuity layer; offer the auto-trigger snippet from `bootstrap-features.md` **on B only**.
 
 ## Step 6: After write (A/B/C)
+
+Send the Audit greps, the primer write and the focus-pin edit in one message when none depends on another's result.
 
 **Audit:** Grep delivered files for the new dated STATUS heading (`## YYYY-MM-DD`) and any new DECISIONS heading. Do not re-read whole files. Do not read the memory directory.
 
