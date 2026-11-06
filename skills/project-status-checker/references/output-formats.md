@@ -92,6 +92,22 @@ Say **end session** to wrap up.
 
 Then the popup. A Critical finding adds one line under the signals; otherwise no findings or Action List unless asked.
 
+Multi-project Start (SKILL.md C, Multi-project Start), one block per member in the order named:
+
+```
+**{project 1}**
+**Recommended First Move: {one action, verb first}**
+Why: {one short line}
+- {state signal}                                         <- at most 2
+
+**{project 2}**
+...
+
+Say **end session** to wrap up all of them.
+```
+
+Then one popup: which First Move to begin, one option per member, in the order named, none Recommended.
+
 ---
 
 ## Format D: Stakeholder Briefing (Entry Point D)

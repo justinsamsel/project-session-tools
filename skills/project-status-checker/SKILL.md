@@ -1,8 +1,8 @@
 ---
 name: project-status-checker
 metadata:
-  version: "2026.10.30.1"
-description: "Opens work sessions (Start) and audits project health via context files (PROJECT_BRIEF.md, STATUS.md, DECISIONS.md), project instructions, and Freshservice MCP. SCOPE GATE: code and IT project work only. Engage when the working folder is a project (a context/ folder, a project-level CLAUDE.md, or a git repo root), or when the user names a project, a ticket folder under projects/ or tickets/, or the portfolio, even from the vault root. In a personal-vault or family session, a bare 'plan my day' is not this skill; defer to the user's own daily-planning skill. START triggers: 'start', 'start session', 'start <project, ticket, or folder path>', 'start INC-000123', 'resume/open/work on <project or ticket>'. Load this skill BEFORE orienting from the project's own CLAUDE.md, STATUS, or primer; a primer that already names a first move does not replace it. Also covers status, staleness, blockers, decision gaps, and multi-project attention (Entry Point F Portfolio Focus). Where context files exist, prefer this skill for status requests even when the answer looks available in conversation."
+  version: "2026.11.06.1"
+description: "Opens work sessions (Start) and audits project health via context files (PROJECT_BRIEF.md, STATUS.md, DECISIONS.md), project instructions, and Freshservice MCP. SCOPE GATE: code and IT project work only. Engage when the working folder is a project (a context/ folder, a project-level CLAUDE.md, or a git repo root), or when the user names a project, a ticket folder under projects/ or tickets/, or the portfolio, even from the vault root. In a personal-vault or family session, a bare 'plan my day' is not this skill; defer to the user's own daily-planning skill. START triggers: 'start', 'start session', 'start <project, ticket, or folder path>', 'start INC-000123', 'start <A> and <B>' (two or more projects or tickets), 'resume/open/work on <project or ticket>'. Load this skill BEFORE orienting from the project's own CLAUDE.md, STATUS, or primer; a primer that already names a first move does not replace it. Also covers status, staleness, blockers, decision gaps, and multi-project attention (Entry Point F Portfolio Focus). Where context files exist, prefer this skill for status requests even when the answer looks available in conversation."
 ---
 
 # Project Status Checker
@@ -66,16 +66,16 @@ When probing: one lightweight query. Filters use outer double quotes and inner s
 |---|---|---|---|
 | **A: Quick Check** (default) | "check status", "where are we", "catch me up" | `health-scoring.md` | Format A dashboard |
 | **B: Full Audit** | "full audit", "deep check" | `health-scoring.md` + `analysis-patterns.md` | Format B narrative |
-| **C: Start** (Resume Snapshot) | `start`, `start <project\|ticket\|path>`, "plan my session" inside a project; builder Deep accept | Fast: none. Deep: `analysis-patterns.md` passes 1-2 only | Format C: First Move + Why + popup, 12 lines max |
+| **C: Start** (Resume Snapshot) | `start`, `start <project\|ticket\|path>`, `start <A> and <B>`, "plan my session" inside a project; builder Deep accept | Fast: none. Deep: `analysis-patterns.md` passes 1-2 only | Format C: First Move + Why + popup, 12 lines max. Multi: one block per member + order popup |
 | **D: Stakeholder Briefing** | "summary for {name}", "weekly update" | none | Format D |
 | **E: Multi-Project Scan** | explicit full cross-project audit | `health-scoring.md` + `analysis-patterns.md` + `shared-conventions.md` | Format E |
 | **F: Portfolio Focus** | "which project", "plan my day" (in a project context), "portfolio" | `shared-conventions.md` | Format F |
 
-Any `start ...` request is C. Ask once (AskUserQuestion) only when the entry point is genuinely ambiguous.
+Any `start ...` request is C. A start that names two or more projects or tickets is C's multi-project mode (below), never a request to pick one. Ask once (AskUserQuestion) only when the entry point is genuinely ambiguous.
 
 ### C: Start
 
-The one single-project opening mode. Goal: fastest route into productive work on **one** project, led by a single Recommended First Move. Run it even when the project's primer already names a first move; use the primer as the source, in this format.
+The opening mode. Goal: fastest route into productive work on **one** project (two or more named: see Multi-project Start below), led by a single Recommended First Move. Run it even when the project's primer already names a first move; use the primer as the source, in this format.
 
 1. **Resolve project.** CWD if it already looks like a project (`context/`, `CLAUDE.md`, or BRIEF/STATUS). Else a project or ticket the user named (folder name or `INC-` / `SR-` / `MI-` number), resolved under the vault `projects/` or `tickets/` folder even when the session began at the vault root; treat it as the working project from then on. Else ask once.
 2. **Fast read (default).** One `project_snapshot` call (it also resolves step 1), plus the project `CLAUDE.md` only if it is not already in context. A fresh primer (same project, not contradicting STATUS) is the source; a `notes` line about the primer being older than STATUS means trust STATUS. Do not list `work/` items, grep the board, or open `notes/`. No context files at all: say so once and offer bootstrap via session-context-updater Entry Point B or `project-builder`. Do not invent state. Any other read the start needs (the project `CLAUDE.md`, the ticket, the primer) goes in the same message as `project_snapshot`, never one after another.
@@ -84,6 +84,16 @@ The one single-project opening mode. Goal: fastest route into productive work on
 5. **Stop.** **12 lines total before the popup.** No "where it stands" section, if/then branches, numbered later stages, or "still open" list; cut material stays in the project files and is offered only on request. Do not start the First Move or open a work item until the user picks it or says to begin.
 
 Start is read-only. Never force a Full Audit. Bias the First Move to a still-valid pinned `work/CURRENT.md` item. If primer and STATUS conflict, trust STATUS + BRIEF and note the conflict in one line. Stay on the asked task: no parity checks, backups, upgrades, or extra skills, and no scan of other projects; if you notice extra work, one line at most, then stop.
+
+#### Multi-project Start
+
+When the start names two or more projects or tickets (`start A and B`, `start A, B and C`), those are the set. Every single-project rule above applies per member, with these changes:
+
+1. **Read all at once.** One `project_snapshot` per member, all in one parallel message, together with any other read a member needs (a project `CLAUDE.md` not already in context). A member that does not resolve gets one line, `{name}: not found`, and the rest still start.
+2. **One block per member, in the order named:** `**{project}**`, then the line `**Recommended First Move: {one action, verb first}**` with that label word for word, `Why:` one short line, and at most 2 state signals. Same First Move sources and primer/STATUS rules as single Start. No health score unless asked.
+3. **No ranking.** Never say which member matters more, never recommend an order, and never mention a project outside the set.
+4. **Close:** the hint "Say **end session** to wrap up all of them.", then one popup asking which First Move to begin: one option per member (`{project}: {First Move, a few words}`), in the order named, none marked Recommended. More than four members: the first four, and the rest come in a second popup after.
+5. **Stop.** At most 6 lines per member plus 1, before the popup. Start nothing until the user picks.
 
 ### D: Stakeholder Briefing
 
