@@ -22022,6 +22022,10 @@ function writeStatus(dir, input) {
   let { fm, body } = splitFrontmatter(text);
   let replacedCurrentState = null;
   if (input.currentState) ({ body, replaced: replacedCurrentState } = setCurrentState(body, input.currentState));
+  const droppedCurrentState = replacedCurrentState && input.currentState ? droppedSentences(replacedCurrentState, input.currentState) : [];
+  const warnings = droppedCurrentState.length ? [
+    `Current State dropped ${droppedCurrentState.length} sentence${droppedCurrentState.length === 1 ? "" : "s"} from the old text; check each in droppedCurrentState is resolved, else carry it forward.`
+  ] : [];
   const sameRe = new RegExp(`^##\\s+${heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*\\n[\\s\\S]*?(?=^##\\s|$(?![\\s\\S]))`, "im");
   const same = sameRe.exec(body);
   let action;
@@ -22050,7 +22054,7 @@ function writeStatus(dir, input) {
   }
   const changed = out !== text;
   if (changed) save(path, out, eol);
-  return { path, heading, action: changed ? action : "unchanged", bulletsAdded: added, replacedCurrentState, bloat: bloat(out) };
+  return { path, heading, action: changed ? action : "unchanged", bulletsAdded: added, replacedCurrentState, droppedCurrentState, warnings, bloat: bloat(out) };
 }
 function condenseStatus(dir, outcomes, keep) {
   const path = requireStatus(dir);
@@ -22160,12 +22164,26 @@ function followedUp(item, laterText, laterLines) {
   if (!key || laterText.includes(key)) return true;
   const mine = words(item);
   if (mine.size < 4) return false;
-  const ids = [...mine].filter((w) => /\d/.test(w));
-  return laterLines.some((line) => {
-    if (!ids.every((w) => line.has(w))) return false;
-    let hit = 0;
-    for (const w of mine) if (line.has(w)) hit++;
-    return hit / mine.size >= FOLLOW_UP_OVERLAP;
+  return laterLines.some((line) => overlaps(mine, line));
+}
+function overlaps(mine, line) {
+  for (const w of mine) if (/\d/.test(w) && !line.has(w)) return false;
+  let hit = 0;
+  for (const w of mine) if (line.has(w)) hit++;
+  return hit / mine.size >= FOLLOW_UP_OVERLAP;
+}
+function sentences(text) {
+  return text.split(/\n+/).flatMap((line) => line.replace(/^\s*(?:[-*+]|\d+\.)\s+/, "").split(/(?<=[.!?])\s+(?=[A-Z0-9`(*])/)).map((s) => s.trim()).filter((s) => /[a-z0-9]/i.test(s));
+}
+function droppedSentences(oldText, newText) {
+  const whole = norm(newText);
+  const fresh = sentences(newText).map(words);
+  return sentences(oldText).filter((s) => {
+    const key = norm(s).replace(/[.!?]+$/, "");
+    if (!key || whole.includes(key)) return false;
+    const mine = words(s);
+    if (mine.size < 4) return true;
+    return !fresh.some((line) => overlaps(mine, line));
   });
 }
 function staleItems(dir, thresholdDays = 14, blockerDays = 7, asOf = today()) {
@@ -22503,7 +22521,7 @@ server.registerTool(
       label: external_exports.string().describe("Short session label for the heading, e.g. 'MCP server pilot'."),
       date: external_exports.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().describe("Entry date, default today (local)."),
       currentState: external_exports.string().optional().describe(
-        "Replaces the WHOLE Current State section (specific one-liner + phase). Carry forward any lines in it that are still true; the old text comes back as replacedCurrentState so you can check nothing live was dropped."
+        "Replaces the WHOLE Current State section (specific one-liner + phase). Carry forward any lines in it that are still true; the old text comes back as replacedCurrentState, and every old sentence the new text does not carry comes back in droppedCurrentState with a line in warnings (the write still happens). Re-add each dropped sentence that is still true."
       ),
       phase: external_exports.string().optional().describe("Frontmatter status to set, e.g. active, on-hold, complete."),
       completed: bulletList,

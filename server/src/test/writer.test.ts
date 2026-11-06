@@ -219,3 +219,54 @@ test("condense keeps 5 entries when 6 would still leave STATUS over 120 lines", 
   assert.equal(c.kept, 5);
   assert.ok(c.lines <= 120, `${c.lines} lines after condense`);
 });
+
+// ---------- piece 6: Current State drop guard ----------
+
+const withState = (state: string) => STATUS.replace("Old state.", state);
+
+test("status_write warns when the new Current State drops a sentence", () => {
+  const dir = project(withState("Track 1 is live and proven on demand. Canary #108867 must stay Open. Piece 6 is optional and not built."));
+  const r = writeStatus(dir, { date: "2026-10-28", label: "S", currentState: "Track 1 is live and proven on demand. Piece 6 is optional and not built." });
+  assert.deepEqual(r.droppedCurrentState, ["Canary #108867 must stay Open."]);
+  assert.equal(r.warnings.length, 1);
+  assert.match(r.warnings[0], /dropped 1 sentence/);
+  assert.match(statusOf(dir), /Piece 6 is optional and not built\./, "warn only: the write still lands");
+});
+
+test("status_write does not flag a reworded sentence that keeps its words and numbers", () => {
+  const dir = project(withState("Canary ticket #108867 must stay Open until the Wednesday run."));
+  const r = writeStatus(dir, { date: "2026-10-28", label: "S", currentState: "The canary ticket #108867 must stay Open until Wednesday's run, by design." });
+  assert.deepEqual(r.droppedCurrentState, []);
+  assert.deepEqual(r.warnings, []);
+});
+
+test("status_write flags a sentence whose number changed", () => {
+  const dir = project(withState("Plugin main sits at commit 4ef3db9 in the repo clone."));
+  const r = writeStatus(dir, { date: "2026-10-28", label: "S", currentState: "Plugin main sits at commit 5abc123 in the repo clone." });
+  assert.deepEqual(r.droppedCurrentState, ["Plugin main sits at commit 4ef3db9 in the repo clone."]);
+});
+
+test("status_write checks bulleted Current State lines one by one", () => {
+  const dir = project(withState("- Track 1 live\n- Canary stays open\n- Piece 6 optional"));
+  const r = writeStatus(dir, { date: "2026-10-28", label: "S", currentState: "- Track 1 live\n- Piece 6 optional" });
+  assert.deepEqual(r.droppedCurrentState, ["Canary stays open"]);
+});
+
+test("status_write drop guard: file names and amounts do not split sentences; no false warning on carry-over", () => {
+  const state = "Runs `Get-DailyMeetings.ps1` and `Get-DailyStallVerdict.ps1` before Claude. Cost is $2.54 on Sonnet against $11.03 on Opus.";
+  const dir = project(withState(state));
+  const r = writeStatus(dir, { date: "2026-10-28", label: "S", currentState: `${state} Track 2 is live.` });
+  assert.deepEqual(r.droppedCurrentState, []);
+  assert.deepEqual(r.warnings, []);
+});
+
+test("status_write drop guard is quiet when Current State is not given or is new", () => {
+  const dir = project();
+  const r = writeStatus(dir, { date: "2026-10-28", label: "S", completed: ["x"] });
+  assert.deepEqual(r.droppedCurrentState, []);
+  assert.deepEqual(r.warnings, []);
+  const bare = project("# STATUS\n\n## 2026-10-01, First\n\n**Completed:**\n- a\n");
+  const r2 = writeStatus(bare, { date: "2026-10-28", label: "S", currentState: "Brand new." });
+  assert.equal(r2.replacedCurrentState, null);
+  assert.deepEqual(r2.droppedCurrentState, []);
+});

@@ -183,6 +183,14 @@ export function writeStatus(dir: string, input: StatusInput) {
 
   let replacedCurrentState: string | null = null;
   if (input.currentState) ({ body, replaced: replacedCurrentState } = setCurrentState(body, input.currentState));
+  // Piece 6: warn (never block) when the new Current State leaves out a sentence of the old one.
+  const droppedCurrentState = replacedCurrentState && input.currentState ? droppedSentences(replacedCurrentState, input.currentState) : [];
+  const warnings = droppedCurrentState.length
+    ? [
+        `Current State dropped ${droppedCurrentState.length} sentence${droppedCurrentState.length === 1 ? "" : "s"} from the old text; ` +
+          "check each in droppedCurrentState is resolved, else carry it forward.",
+      ]
+    : [];
 
   // Same day + same label: merge instead of stacking a duplicate block.
   const sameRe = new RegExp(`^##\\s+${heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*\\n[\\s\\S]*?(?=^##\\s|$(?![\\s\\S]))`, "im");
@@ -214,7 +222,7 @@ export function writeStatus(dir: string, input: StatusInput) {
   }
   const changed = out !== text;
   if (changed) save(path, out, eol);
-  return { path, heading, action: changed ? action : "unchanged", bulletsAdded: added, replacedCurrentState, bloat: bloat(out) };
+  return { path, heading, action: changed ? action : "unchanged", bulletsAdded: added, replacedCurrentState, droppedCurrentState, warnings, bloat: bloat(out) };
 }
 
 // ---------- STATUS condense ----------
@@ -373,12 +381,45 @@ function followedUp(item: string, laterText: string, laterLines: Set<string>[]):
   if (!key || laterText.includes(key)) return true;
   const mine = words(item);
   if (mine.size < 4) return false;
-  const ids = [...mine].filter((w) => /\d/.test(w));
-  return laterLines.some((line) => {
-    if (!ids.every((w) => line.has(w))) return false;
-    let hit = 0;
-    for (const w of mine) if (line.has(w)) hit++;
-    return hit / mine.size >= FOLLOW_UP_OVERLAP;
+  return laterLines.some((line) => overlaps(mine, line));
+}
+
+/** True when `line` holds every word of `mine` that has a digit in it and at least FOLLOW_UP_OVERLAP of its words. */
+function overlaps(mine: Set<string>, line: Set<string>): boolean {
+  for (const w of mine) if (/\d/.test(w) && !line.has(w)) return false;
+  let hit = 0;
+  for (const w of mine) if (line.has(w)) hit++;
+  return hit / mine.size >= FOLLOW_UP_OVERLAP;
+}
+
+// ---------- Current State drop guard (piece 6) ----------
+
+/**
+ * Sentences and list items of a Current State. Splits on line breaks, and on . ! ? followed by a space and a
+ * capital, digit, backtick, ( or *, so `file.ps1` and `$2.54` stay whole. List markers are stripped.
+ */
+export function sentences(text: string): string[] {
+  return text
+    .split(/\n+/)
+    .flatMap((line) => line.replace(/^\s*(?:[-*+]|\d+\.)\s+/, "").split(/(?<=[.!?])\s+(?=[A-Z0-9`(*])/))
+    .map((s) => s.trim())
+    .filter((s) => /[a-z0-9]/i.test(s));
+}
+
+/**
+ * Old sentences the new text does not carry. Carried means the new text repeats the sentence (case, markdown
+ * and spacing ignored), or one new sentence holds most of its words and every word with a digit in it, the
+ * same rule staleness uses for a reworded follow-up. Short sentences (under 4 words) need the repeat.
+ */
+export function droppedSentences(oldText: string, newText: string): string[] {
+  const whole = norm(newText);
+  const fresh = sentences(newText).map(words);
+  return sentences(oldText).filter((s) => {
+    const key = norm(s).replace(/[.!?]+$/, "");
+    if (!key || whole.includes(key)) return false;
+    const mine = words(s);
+    if (mine.size < 4) return true;
+    return !fresh.some((line) => overlaps(mine, line));
   });
 }
 

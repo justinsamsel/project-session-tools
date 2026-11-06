@@ -35,11 +35,11 @@ The `project-session-tools` MCP server places STATUS and DECISIONS writes, keeps
 | Tool | Does |
 |---|---|
 | `stale_items` | Step 1.4 staleness scan |
-| `status_write` | Step 4 STATUS: Current State, new dated block (or merge into today's same-label block), frontmatter. Returns `replacedCurrentState` and `bloat` |
+| `status_write` | Step 4 STATUS: Current State, new dated block (or merge into today's same-label block), frontmatter. Returns `replacedCurrentState`, `droppedCurrentState`, `warnings` and `bloat` |
 | `status_condense` | Only when `bloat.needed` lists `bloat.wouldCondense`; pass a one-line outcome per date |
 | `decision_append` | Step 4 DECISIONS entry, Superseded marker via `supersedes` |
 
-`currentState` replaces the whole section: carry forward lines still true, then check `replacedCurrentState` for anything live you dropped. If `bloat.reasons` says too few dated entries to fold, trim by hand only when the session touched that section; otherwise name it under **Heads up**. Commit the `path` each tool returns (Step 6): the commit guard does not see MCP writes. Tool results already confirm headings, so skip the Step 6 audit grep for those files.
+`currentState` replaces the whole section: carry forward lines still true. Then take each sentence in `droppedCurrentState`: still true, call `status_write` again with it re-added; resolved, leave it out; unsure, name it under **Heads up**. If `bloat.reasons` says too few dated entries to fold, trim by hand only when the session touched that section; otherwise name it under **Heads up**. Commit the `path` each tool returns (Step 6): the commit guard does not see MCP writes. Tool results already confirm headings, so skip the Step 6 audit grep for those files.
 
 ## Config (inline)
 

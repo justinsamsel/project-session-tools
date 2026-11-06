@@ -185,7 +185,8 @@ server.registerTool(
         .optional()
         .describe(
           "Replaces the WHOLE Current State section (specific one-liner + phase). Carry forward any lines in it that are still true; " +
-            "the old text comes back as replacedCurrentState so you can check nothing live was dropped.",
+            "the old text comes back as replacedCurrentState, and every old sentence the new text does not carry comes back in " +
+            "droppedCurrentState with a line in warnings (the write still happens). Re-add each dropped sentence that is still true.",
         ),
       phase: z.string().optional().describe("Frontmatter status to set, e.g. active, on-hold, complete."),
       completed: bulletList,
