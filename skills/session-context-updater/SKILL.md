@@ -122,7 +122,7 @@ The session named two or more projects or tickets (at its start, or in a session
 
 ## Step 1: Detect
 
-0. **Set check.** If the session named two or more projects or tickets, or the instructions name a session capture folder holding today's file with a `Set:` line of two or more, switch to Entry Point I and follow `multi-project.md`, which runs the steps below per project.
+0. **Set check.** If the session named two or more projects or tickets, or the instructions name a session capture folder holding today's file whose `Set:` line names two or more and includes this session's project, switch to Entry Point I and follow `multi-project.md`, which runs the steps below per project.
 1. **In-vault.** If `vault-context.md` is loaded, set `in_vault` from `%APPDATA%\obsidian\obsidian.json` as that file describes.
 2. **Inventory (scoped).** Read `context/PROJECT_BRIEF.md`, `context/STATUS.md`, and `context/DECISIONS.md` (or flat-root equivalents). Classify by content if names differ. A root `CLAUDE.md` is instructions by name: do **not** read its body on ordinary A/C wrap-up. Read it only if this session drafted or changed project instructions, or this is bootstrap (B) with no trio yet. Walk the rest of the tree **only** if a Brief, Status, or Decisions role is still missing. Do not open `notes/`, `work/`, `archive/`, `docs/`, or `skills/` on a normal wrap-up. Read all three files in one message as parallel Read calls, and send `stale_items` (item 4) in that same message when a Status file exists.
 3. **Config.** Parse `<!-- session-context-config` from those files using the table above.
