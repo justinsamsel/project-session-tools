@@ -1,7 +1,7 @@
 ---
 name: session-context-updater
 metadata:
-  version: "2026.10.30.1"
+  version: "2026.11.06.1"
 description: "Capture session context into PROJECT_BRIEF.md, STATUS.md, and DECISIONS.md, then refresh the next-session primer. This is the End of a work session. SCOPE GATE: code and IT project work only. Engage when the working folder is a project (a context/ folder, a project-level CLAUDE.md, or a git repo root), or when the user names a project or ticket folder under projects/ or tickets/ from the vault root. In a personal-vault, family, notes, or finance session that names none, do not engage; note-taking there belongs to the user's own notes, and there are no context files to write. END triggers: 'end session', 'session end', 'wrap up', 'wrap this session', 'close out this session'. Prefer this skill over ad-hoc 'I'll update STATUS myself'. Opening a session ('start') belongs to project-status-checker, not this skill."
 ---
 
@@ -24,6 +24,7 @@ Write engine for project continuity, and the **End** of a work session. Default 
 | `references/resume-experience.md` | Bootstrap / low-context start / explicit resume / builder Fast/Deep accept only |
 | `references/examples.md` | Revision requests only |
 | `references/no-server.md` | Only when the `project-session-tools` tools are not listed |
+| `references/multi-project.md` | Entry Point I only |
 
 Do **not** load `resume-experience.md` for ordinary wrap-up or primer regen. Do **not** load `bootstrap-features.md` on A/C. There are no other resume refs.
 
@@ -113,10 +114,15 @@ Frontmatter `status` back to an active phase. Suggest project-status-checker.
 
 **Load:** `legacy-project-compat.md` + `vault-context.md` + `file-templates.md` (missing files only) + `bootstrap-features.md`. Create only what is missing. Default `write_mode: auto` if adding config. Upgrade is optional; A–E must work without it.
 
+### I: Multi-project wrap-up
+
+The session named two or more projects or tickets (at its start, or in a session capture file's `Set:` line). **Load:** A's set + `multi-project.md`. Wraps every project in the set in one run, routes each item to one owner, and prints one card. A single named project is always A, never I.
+
 ---
 
 ## Step 1: Detect
 
+0. **Set check.** If the session named two or more projects or tickets, or the instructions name a session capture folder holding today's file with a `Set:` line of two or more, switch to Entry Point I and follow `multi-project.md`, which runs the steps below per project.
 1. **In-vault.** If `vault-context.md` is loaded, set `in_vault` from `%APPDATA%\obsidian\obsidian.json` as that file describes.
 2. **Inventory (scoped).** Read `context/PROJECT_BRIEF.md`, `context/STATUS.md`, and `context/DECISIONS.md` (or flat-root equivalents). Classify by content if names differ. A root `CLAUDE.md` is instructions by name: do **not** read its body on ordinary A/C wrap-up. Read it only if this session drafted or changed project instructions, or this is bootstrap (B) with no trio yet. Walk the rest of the tree **only** if a Brief, Status, or Decisions role is still missing. Do not open `notes/`, `work/`, `archive/`, `docs/`, or `skills/` on a normal wrap-up. Read all three files in one message as parallel Read calls, and send `stale_items` (item 4) in that same message when a Status file exists.
 3. **Config.** Parse `<!-- session-context-config` from those files using the table above.
