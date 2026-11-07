@@ -4,7 +4,7 @@ Load only on Entry Point I. A session that named two or more projects or tickets
 
 ## 1. Resolve the set
 
-1. **Capture file first.** If the instructions in context name a session capture folder, look there for today's files whose `Set:` line names this session's projects, and use the one modified most recently (by file time, never by name). The `Set:` line is the set.
+1. **Capture file first.** If the instructions in context name a session capture folder, look there for today's files whose `Set:` line names this session's projects and that this session created or appended to (the write appears in this conversation), and use the one modified most recently (by file time, never by name). A file this session never wrote is an earlier session's and is ignored. The `Set:` line is the set.
 2. **Else the conversation.** The projects or tickets the user named at the start of the session are the set.
 3. Resolve every member with `project_snapshot`, all in one parallel message. A member that does not resolve is named under **Heads up** and skipped; the rest still wrap.
 4. **Never write outside the set.** An item that belongs to a project outside the set is not written anywhere; name it under **Heads up** as `outside the set, not written`.
