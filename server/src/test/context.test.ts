@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { mkdtempSync, mkdirSync, readFileSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { composite, freshness, parseFrontmatter, portfolio, recordHealth, setFrontmatter, snapshot, statusEntries } from "../context.js";
+import { composite, freshness, parseFrontmatter, portfolio, recordHealth, setFrontmatter, snapshot, statusEntries, waitingProposals } from "../context.js";
 
 const STATUS = `---
 type: status
@@ -74,6 +74,37 @@ test("snapshot reads state, tickets and pin", () => {
   assert.deepEqual(s.ticketIds, ["INC-000412"]);
   assert.equal(s.pinnedItem, null);
   assert.equal(snapshot(join(root, "beta")).pinnedItem, "Fix the gate");
+});
+
+function proposal(dir: string, file: string, fm: string): void {
+  writeFileSync(join(dir, file), `---\ntype: proposal\n${fm}\n---\n\n## Found\nx\n`);
+}
+
+test("waitingProposals matches by ticket id or target path and skips resolved, snoozed, trial and archive", () => {
+  const root = mkdtempSync(join(tmpdir(), "wsmcp-prop-"));
+  const folder = join(root, "tickets", "INC-100001 - Printer - Pat");
+  mkdirSync(join(folder, "context"), { recursive: true });
+  const props = join(root, "proposals");
+  mkdirSync(join(props, "trial", "run1"), { recursive: true });
+  mkdirSync(join(props, "archive"));
+
+  proposal(props, "2026-11-02-by-ticket.md", "title: Reply to Pat\nstatus: pending          # pending | approved\nkind: outward\ncreated: 2026-11-02\nticket: INC-100001");
+  proposal(props, "2026-11-01-by-target.md", "title: Update STATUS\nstatus: approved\nkind: vault-edit\ncreated: 2026-11-01\ntarget: \"tickets/INC-100001 - Printer - Pat/context/STATUS.md\"");
+  proposal(props, "2026-11-03-done.md", "title: Done one\nstatus: done\ncreated: 2026-11-03\nticket: INC-100001");
+  proposal(props, "2026-11-04-snoozed.md", "title: Snoozed\nstatus: pending\ncreated: 2026-11-04\nticket: INC-100001\nsnooze-until: 2999-01-01");
+  proposal(props, "2026-11-05-other.md", "title: Other ticket\nstatus: pending\ncreated: 2026-11-05\nticket: INC-100002");
+  proposal(join(props, "trial", "run1"), "2026-11-06-trial.md", "title: Trial\nstatus: pending\ncreated: 2026-11-06\nticket: INC-100001");
+  proposal(join(props, "archive"), "2026-10-01-old.md", "title: Old\nstatus: pending\ncreated: 2026-10-01\nticket: INC-100001");
+  writeFileSync(join(props, "README.md"), "---\ntype: index\n---\n");
+
+  const got = waitingProposals(folder, props);
+  assert.deepEqual(got.map((p) => p.file), ["2026-11-01-by-target.md", "2026-11-02-by-ticket.md"]);
+  assert.equal(got[1].title, "Reply to Pat");
+  assert.equal(got[1].status, "pending");
+  assert.equal(got[1].kind, "outward");
+  assert.deepEqual(waitingProposals(folder, join(root, "no-such-folder")), []);
+  assert.equal(snapshot(folder, 2, props).proposals.length, 2);
+  assert.deepEqual(snapshot(folder, 2, null).proposals, []);
 });
 
 test("portfolio ranks pinned over open items and skips archived", () => {

@@ -21701,7 +21701,38 @@ function resolveProject(ref, root = DEFAULT_ROOT) {
 function looksLikeProject(dir) {
   return existsSync(join(dir, "context")) || existsSync(join(dir, "CLAUDE.md")) || contextFile(dir, "STATUS.md") !== null || contextFile(dir, "PROJECT_BRIEF.md") !== null;
 }
-function snapshot(dir, entries = 2) {
+var MAX_PROPOSALS = 5;
+function fmValue(fm, key) {
+  return (fm[key] ?? "").replace(/\s+#.*$/, "").trim();
+}
+function waitingProposals(dir, proposalsDir) {
+  if (!existsSync(proposalsDir)) return [];
+  const name = basename(dir);
+  const id = /^((?:INC|SR|MI)-\d{3,})\b/.exec(name)?.[1] ?? null;
+  const day = today();
+  const out = [];
+  for (const f of readdirSync(proposalsDir, { withFileTypes: true })) {
+    if (!f.isFile() || !f.name.endsWith(".md")) continue;
+    const fm = parseFrontmatter(read(join(proposalsDir, f.name)) ?? "").data;
+    if (fmValue(fm, "type") !== "proposal") continue;
+    const status = fmValue(fm, "status");
+    if (status !== "pending" && status !== "approved") continue;
+    const snooze = fmValue(fm, "snooze-until");
+    if (snooze && snooze > day) continue;
+    const target = fmValue(fm, "target");
+    const named = id !== null && fmValue(fm, "ticket") === id || target !== "" && target.includes(name);
+    if (!named) continue;
+    out.push({
+      file: f.name,
+      title: fmValue(fm, "title") || f.name.replace(/\.md$/, ""),
+      status,
+      kind: fmValue(fm, "kind"),
+      created: fmValue(fm, "created")
+    });
+  }
+  return out.sort((a, b) => a.created.localeCompare(b.created) || a.file.localeCompare(b.file)).slice(0, MAX_PROPOSALS);
+}
+function snapshot(dir, entries = 2, proposalsDir = join(DEFAULT_ROOT, "..", "proposals")) {
   const notes = [];
   const briefPath = contextFile(dir, "PROJECT_BRIEF.md");
   const statusPath = contextFile(dir, "STATUS.md");
@@ -21743,6 +21774,7 @@ function snapshot(dir, entries = 2) {
     primer: p,
     newestDecision: newestDecision(decisionsText),
     ticketIds: [...tickets].sort(),
+    proposals: proposalsDir ? waitingProposals(dir, proposalsDir) : [],
     notes
   };
 }
@@ -21769,7 +21801,7 @@ function portfolio(root = DEFAULT_ROOT, staleDays = 7, dormantDays = 60) {
     if (!d.isDirectory() || d.name.startsWith(".") || SKIP_DIRS.has(d.name)) continue;
     const dir = join(root, d.name);
     if (!contextFile(dir, "STATUS.md") && !contextFile(dir, "PROJECT_BRIEF.md")) continue;
-    const s = snapshot(dir, 1);
+    const s = snapshot(dir, 1, null);
     const status = (s.frontmatter.brief.status || s.frontmatter.status.status || "").toLowerCase() || null;
     if (status && CLOSED_STATUSES.has(status)) continue;
     const statusText = read(contextFile(dir, "STATUS.md") ?? "") ?? "";

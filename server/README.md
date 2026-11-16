@@ -4,7 +4,7 @@ The deterministic half of the skills. Each `SKILL.md` still decides **when** to 
 
 | Tool | Used by | Does |
 |---|---|---|
-| `project_snapshot` | checker Entry Point C, A | Fast read: files present, frontmatter, Current State, newest entries + Next Steps, days since last entry, pinned CURRENT item, primer, newest decision, ticket ids |
+| `project_snapshot` | checker Entry Point C, A | Fast read: files present, frontmatter, Current State, newest entries + Next Steps, days since last entry, pinned CURRENT item, primer, newest decision, ticket ids, waiting proposals (pending or approved notes in the vault's `proposals/` whose `ticket:` or `target:` names this folder) |
 | `portfolio_rank` | checker Entry Point F | Ranks active projects: pinned > open work items > stale (most recent first) > blocked > dormant (60+ days) > quiet |
 | `health_score` | checker A, B, E | Composite per `health-scoring.md`, weight redistribution, band, display line |
 | `health_record` | checker A, B, C (scored) | Writes frontmatter `health` / `last-check` only |

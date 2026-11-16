@@ -48,7 +48,17 @@ export interface Snapshot {
   primer: { file: string; date: string | null; text: string } | null;
   newestDecision: string | null;
   ticketIds: string[];
+  proposals: WaitingProposal[];
   notes: string[];
+}
+
+/** A note in the vault's proposals/ folder that names this folder and has not been resolved. */
+export interface WaitingProposal {
+  file: string;
+  title: string;
+  status: string;
+  kind: string;
+  created: string;
 }
 
 // ---------- small helpers ----------
@@ -210,9 +220,56 @@ export function looksLikeProject(dir: string): boolean {
   );
 }
 
+// ---------- waiting proposals ----------
+
+const MAX_PROPOSALS = 5;
+
+/** Drop the trailing `# comment` that the proposals README template carries on its value lines. */
+function fmValue(fm: Frontmatter, key: string): string {
+  return (fm[key] ?? "").replace(/\s+#.*$/, "").trim();
+}
+
+/**
+ * Pending or approved, unsnoozed proposals whose `ticket:` is this folder's ticket number or whose
+ * `target:` path contains this folder's name. Top level of proposals/ only, so proposals/trial/ and
+ * proposals/archive/ never count. A missing folder gives an empty list.
+ */
+export function waitingProposals(dir: string, proposalsDir: string): WaitingProposal[] {
+  if (!existsSync(proposalsDir)) return [];
+  const name = basename(dir);
+  const id = /^((?:INC|SR|MI)-\d{3,})\b/.exec(name)?.[1] ?? null;
+  const day = today();
+  const out: WaitingProposal[] = [];
+  for (const f of readdirSync(proposalsDir, { withFileTypes: true })) {
+    if (!f.isFile() || !f.name.endsWith(".md")) continue;
+    const fm = parseFrontmatter(read(join(proposalsDir, f.name)) ?? "").data;
+    if (fmValue(fm, "type") !== "proposal") continue;
+    const status = fmValue(fm, "status");
+    if (status !== "pending" && status !== "approved") continue;
+    const snooze = fmValue(fm, "snooze-until");
+    if (snooze && snooze > day) continue;
+    const target = fmValue(fm, "target");
+    const named = (id !== null && fmValue(fm, "ticket") === id) || (target !== "" && target.includes(name));
+    if (!named) continue;
+    out.push({
+      file: f.name,
+      title: fmValue(fm, "title") || f.name.replace(/\.md$/, ""),
+      status,
+      kind: fmValue(fm, "kind"),
+      created: fmValue(fm, "created"),
+    });
+  }
+  return out.sort((a, b) => a.created.localeCompare(b.created) || a.file.localeCompare(b.file)).slice(0, MAX_PROPOSALS);
+}
+
 // ---------- snapshot (Entry Point C fast read) ----------
 
-export function snapshot(dir: string, entries = 2): Snapshot {
+/** `proposalsDir` null skips the proposals lookup (portfolio ranking has no use for it). */
+export function snapshot(
+  dir: string,
+  entries = 2,
+  proposalsDir: string | null = join(DEFAULT_ROOT, "..", "proposals"),
+): Snapshot {
   const notes: string[] = [];
   const briefPath = contextFile(dir, "PROJECT_BRIEF.md");
   const statusPath = contextFile(dir, "STATUS.md");
@@ -259,6 +316,7 @@ export function snapshot(dir: string, entries = 2): Snapshot {
     primer: p,
     newestDecision: newestDecision(decisionsText),
     ticketIds: [...tickets].sort(),
+    proposals: proposalsDir ? waitingProposals(dir, proposalsDir) : [],
     notes,
   };
 }
@@ -306,7 +364,7 @@ export function portfolio(root: string = DEFAULT_ROOT, staleDays = 7, dormantDay
     const dir = join(root, d.name);
     if (!contextFile(dir, "STATUS.md") && !contextFile(dir, "PROJECT_BRIEF.md")) continue;
 
-    const s = snapshot(dir, 1);
+    const s = snapshot(dir, 1, null);
     const status = (s.frontmatter.brief.status || s.frontmatter.status.status || "").toLowerCase() || null;
     if (status && CLOSED_STATUSES.has(status)) continue;
 
