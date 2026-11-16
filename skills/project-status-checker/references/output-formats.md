@@ -85,12 +85,16 @@ The spec is SKILL.md C step 4. Template:
 
 Why: {one short line}
 
-- {state signal}                                         <- at most 3
+1. {next step, verb first} -> settles {what}            <- at most 4 steps
+2. {step} -> settles {what}
+3. {first step that needs the user, named as such}       <- the plan stops here
+
+- {state signal}                                         <- at most 2
 
 Say **end session** to wrap up.
 ```
 
-Then the popup. A Critical finding adds one line under the signals; otherwise no findings or Action List unless asked.
+Then the popup: **Work the plan (Recommended)**, **First Move only**, and at most one real alternative. A Critical finding adds one line under the signals; otherwise no findings or Action List unless asked.
 
 Multi-project Start (SKILL.md C, Multi-project Start), one block per member in the order named:
 
