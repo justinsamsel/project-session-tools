@@ -40,6 +40,7 @@ health: 91              # optional; plain number, portfolio score (see ownership
 last-check: YYYY-MM-DD   # optional; date of last project-status-checker score
 version: {optional}
 owner: {optional; from BRIEF stakeholders}
+requester: {optional, BRIEF only; the person who asked for the work, only when the BRIEF names them; omit when it is the owner or unknown}
 related-systems:
   - {optional; from BRIEF environment}
 ---
@@ -49,7 +50,7 @@ related-systems:
 
 | Field | Written by | Notes |
 |-------|------------|--------|
-| `type`, `project`, `status`, `last-updated`, `owner`, `related-systems` | **session-context-updater** (and builders on bootstrap) | SCU is the continuity write engine |
+| `type`, `project`, `status`, `last-updated`, `owner`, `requester`, `related-systems` | **session-context-updater** (and builders on bootstrap) | SCU is the continuity write engine. `requester` is never guessed: write it only from a person the BRIEF names as asking for the work, and keep an existing value |
 | `health`, `last-check` | **project-status-checker** after a scored single-project run (A, B, or C when a composite score was computed) | **Narrow exception** to checker read-only: frontmatter keys only, never body prose of BRIEF/STATUS/DECISIONS |
 | All fields | **Builders** when creating starter context | Omit `health`/`last-check` until a checker run exists |
 
@@ -73,7 +74,7 @@ Read CWD-relative context paths. If in-vault and frontmatter is present, treat f
 
 ## Bootstrap (builders)
 
-- **In-vault:** write starter context with frontmatter (`type`, `project`, `status`, `last-updated`; optional owner/related-systems from elicitation). No health until checker runs.
+- **In-vault:** write starter context with frontmatter (`type`, `project`, `status`, `last-updated`; optional owner/requester/related-systems from elicitation). No health until checker runs.
 - **Off-vault:** plain markdown.
 
 ## Archive / un-archive (SCU Entry Points F/G)
