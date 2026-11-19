@@ -40,7 +40,7 @@ health: 91              # optional; plain number, portfolio score (see ownership
 last-check: YYYY-MM-DD   # optional; date of last project-status-checker score
 version: {optional}
 owner: {optional; from BRIEF stakeholders}
-requester: {optional, BRIEF only; the person who asked for the work, only when the BRIEF names them; omit when it is the owner or unknown}
+requester: {optional, BRIEF only; the person who asked for the work, only when the BRIEF names them, even when that is the owner; omit when unknown}
 related-systems:
   - {optional; from BRIEF environment}
 ---
